@@ -1,59 +1,40 @@
 #!/bin/bash
 
-if [ ! -d "Fooocus" ]; then
-  git clone https://github.com/estebencalcina/Fooocus.git
+# Clonación del repositorio facefusion
+if [ ! -d "facefusion" ]; then
+  git clone https://github.com/facefusion/facefusion.git
 fi
 
-cd Fooocus
+cd facefusion || exit
 git pull
 
-if [ ! -L ~/.conda/envs/fooocus ]; then
-    ln -s /tmp/fooocus ~/.conda/envs/
-fi
+# Instalación de dependencias
+pip install -q filetype
+pip install -q gradio
+pip install -q gradio-rangeslider
+pip install -q onnx onnxruntime-gpu
 
-eval "$(conda shell.bash hook)"
+# Modificación del archivo layout
+file_path='facefusion/uis/layouts/default.py'
 
-if [ ! -d /tmp/fooocus ]; then
-    mkdir /tmp/fooocus
-    conda env create -f environment.yaml
-    conda activate fooocus
-    pip install -r requirements_versions.txt
-    pip install torch torchvision --force-reinstall --index-url https://download.pytorch.org/whl/cu117
-    conda install glib -y
-    rm -rf ~/.cache/pip
-fi
-
-# Setup the path for model checkpoints
-current_folder=$(pwd)
-model_folder=${current_folder}/models/checkpoints-real-folder
-if [ ! -e config.txt ]; then
-  json_data="{ \"path_checkpoints\": \"$model_folder\" }"
-  echo "$json_data" > config.txt
-  echo "JSON file created: config.txt"
+if [ -f "$file_path" ]; then
+    echo "Modificando el archivo $file_path"
+    sed -i "s/ui.launch(favicon_path = 'facefusion.ico', inbrowser = state_manager.get_item('open_browser'))/ui.launch(favicon_path = 'facefusion.ico', inbrowser = state_manager.get_item('open_browser'), share=True)/" "$file_path"
 else
-  echo "Updating config.txt to use checkpoints-real-folder"
-  jq --arg new_value "$model_folder" '.path_checkpoints = $new_value' config.txt > config_tmp.txt && mv config_tmp.txt config.txt
+    echo "El archivo $file_path no existe."
+    exit 1
 fi
 
-# If the checkpoints folder exists, move it to the new checkpoints-real-folder
-if [ ! -L models/checkpoints ]; then
-    mv models/checkpoints models/checkpoints-real-folder
-    ln -s models/checkpoints-real-folder models/checkpoints
-fi
+# Ejecución del script de facefusion
+python facefusion.py run &
 
-# Activate the fooocus environment
-conda activate fooocus
-cd ..
-
-# Run Python script in the background
-python Fooocus/entry_with_update.py --always-high-vram &
-
+# Esperar antes de iniciar el túnel de Cloudflare
 sleep 120
 
-# Run cloudflared tunnel
+# Ejecutar el túnel de Cloudflare
 cloudflared tunnel --url localhost:7865
 
-# Check if the script was called with the "reset" argument
+# Manejo de argumentos para el script
 if [ $# -eq 0 ]; then
   sh cloudflare.sh
 elif [ $1 = "reset" ]; then

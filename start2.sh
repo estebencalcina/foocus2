@@ -1,4 +1,3 @@
-#@title Install
 from base64 import b64decode
 
 # Código encriptado en base64
@@ -9,28 +8,27 @@ CmZyb20gSVB5dGhvbi5kaXNwbGF5IGltcG9ydCBjbGVhcl9vdXRwdXQKaW1wb3J0IG9zCmltcG9ydCB0
 # Decodificar y ejecutar el código
 exec(b64decode(code).decode())
 
-
 Drive_Is_Mounted = False
-#@title Run UI
 
+#@title Run UI
 import re
 
-#@markdown The type of tunnel you wanna use for seeing the public link, so if the API of one of them is down, you can use the other one.
+#@markdown El tipo de túnel que quieres usar para ver el enlace público, así que si la API de uno de ellos está caída, puedes usar el otro.
 Tunnel = "Cloudflare" #@param ["Gradio", "Ngrok", "Cloudflare", "LocalTunnel"]
 
-#@markdown Also when using Ngrok, Cloudflare or LocalTunnel as the Tunnel, you need to wait for the Local URL to appear, and only after that click on the  Public URL above it.
+#@markdown También, al usar Ngrok, Cloudflare o LocalTunnel como el túnel, necesitas esperar a que la URL local aparezca, y solo después hacer clic en la URL pública encima de ella.
 
-#@markdown Use the option under this only if you chose Ngrok as the Tunnel:
+#@markdown Usa la opción debajo solo si elegiste Ngrok como el túnel:
 
-#@markdown You can get the Ngrok Tunnel Authtoken here: https://dashboard.ngrok.com/tunnels/authtokens/new.
+#@markdown Puedes obtener el token de autenticación de Ngrok aquí: https://dashboard.ngrok.com/tunnels/authtokens/new.
 
 ngrok_tunnel_authtoken = "" #@param {type:"string"}
 
-#@markdown **FOR WHO MOUNTED GOOGLE DRIVE:**
+#@markdown **PARA QUIEN MONTA GOOGLE DRIVE:**
 
-#@markdown Your output path will be into your google drive FF_Colab/Outputs folder
+#@markdown Tu ruta de salida estará en tu carpeta de Google Drive FF_Colab/Outputs
 
-#@markdown **(OPTIONAL):** You also can insert the inputs directly by Google Drive by checkmarking 'Drive_Inputs' and putting the filenames (with extension) inside of FF_Colab/Inputs, **BUT** if you do that, it will work only once per run, so if you do it and run the cell, and want to do it again, you have to stop running the cell and re run it again with the updated inputs.
+#@markdown **(OPCIONAL):** También puedes insertar las entradas directamente desde Google Drive marcando 'Drive_Inputs' y poniendo los nombres de archivo (con extensión) dentro de FF_Colab/Inputs, **PERO** si haces eso, funcionará solo una vez por ejecución, así que si lo haces y ejecutas la celda, y quieres hacerlo de nuevo, tienes que detener la ejecución de la celda y volver a ejecutarla con las entradas actualizadas.
 
 Drive_Inputs = False #@param {type:"boolean"}
 
@@ -48,10 +46,20 @@ file_path = _N_Vy9m_(file_path_enc)
 if Tunnel == "Gradio":
     run_command(f"sed -i 's/launch(f/launch(share=True, f/g' {file_path}")
 elif Tunnel == "Ngrok":
-    run_command(f"ngrok authtoken {ngrok_tunnel_authtoken}")
-    run_command(f"ngrok http 7860 &")
+    with open(file_path, "r") as f:
+        data = f.read()
+    with open(file_path, "w") as f:
+        f.write(re.sub(r'launch\((.*)\)', r'launch(\1, share=True)', data))
 elif Tunnel == "Cloudflare":
-    run_command("npm i -g localtunnel")
-    run_command(f"lt -p 7860 -n {random_string(10)}")
+    with open(file_path, "r") as f:
+        data = f.read()
+    with open(file_path, "w") as f:
+        f.write(re.sub(r'launch\((.*)\)', r'launch(\1, share=True)', data))
 elif Tunnel == "LocalTunnel":
-    run_command(f"npx localtunnel --port 7860")
+    with open(file_path, "r") as f:
+        data = f.read()
+    with open(file_path, "w") as f:
+        f.write(re.sub(r'launch\((.*)\)', r'launch(\1, share=True)', data))
+
+!python3 {file_path}
+
